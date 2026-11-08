@@ -2,6 +2,15 @@
 
 Memory Weave Next 0.3.9 是一款面向 macOS ARM64 的本地微信档案工具。可导入 JSON 或用户授权的微信数据库副本，按账号浏览、搜索、编辑备注和导出；支持微信历史和增量同步，以及部分本地媒体预览。对格式不匹配或无法验证的媒体保留原消息和提示。项目与微信及其他档案工具无隶属关系。
 
+## 源码分析入口
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)：进程边界、数据流及主要调用链。
+- [CODE_MAP.md](CODE_MAP.md)：源码路径、模块索引与入口。
+- [TESTING.md](TESTING.md)：构建、合成测试和验证范围。
+- [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md)：按公开提交 SHA 审查、引用和比较源码的方法。
+
+公开版本以 Git 提交为准。分析时固定完整 SHA；如果已发布正式源码标签，也可通过标签定位相同版本。
+
 ## 构建与测试
 
 需要 macOS ARM64、Xcode Command Line Tools、Node.js 26 和 npm。先在**路径不含空格**的位置准备 SQLCipher 4.6.1 的 amalgamation：

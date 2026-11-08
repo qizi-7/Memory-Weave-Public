@@ -1,0 +1,9 @@
+# AI source review guide
+
+1. **Pin the source.** Record the full public commit SHA (and tag if present). For GitHub links use `/blob/<sha>/<path>#L<line>`. When comparing versions, resolve both public refs and inspect `git diff <old-sha> <new-sha> -- <path>`. Tags such as `source-v0.3.9` are useful only once actually published; never infer a tag or release from the package version.
+2. **Read actual implementation.** Use [CODE_MAP.md](CODE_MAP.md) to locate files and [ARCHITECTURE.md](ARCHITECTURE.md) to choose the initial boundary. Search with `git grep -n` or `rg`, then follow imports, IPC route strings, worker handlers and SQL. Check callers, output consumers and tests. Treat README and comments as claims to verify against the selected revision.
+3. **Tie findings to evidence.** For each finding give the exact path and symbol, triggering input/state, call chain, observed or inferred behavior, and smallest relevant fix. Cite the public SHA. State where evidence stops, including when a platform check or real input is unavailable.
+4. **Verify with synthetic data.** Follow [TESTING.md](TESTING.md). Reproduce changes with synthetic inputs and cover failure paths where relevant. Never request or open actual chats, credentials, private Git history or a real local profile to establish a source-level claim.
+5. **Distinguish public history from private history.** Public versions are separately reviewed source snapshots linked by public commits. Their diffs describe public changes only. This repository is an analysis surface; report changes against public files and do not invent links to internal PRs, audit logs, or source data.
+
+A useful review result contains the pinned SHA, affected files/lines, concrete reproduction, proposed patch and tests, and any uncertainty that changes the conclusion.
