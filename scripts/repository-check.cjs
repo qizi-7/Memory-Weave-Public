@@ -4,15 +4,14 @@ const {execFileSync}=require('node:child_process');
 const git=(args,options={})=>execFileSync('git',args,{encoding:'utf8',...options});
 const exact=new Set([
  '.gitignore','README.md','AGENTS.md','LICENSE','THIRD_PARTY_NOTICES.md',
- 'scripts/repository-check.cjs','scripts/stage-review.cjs','scripts/stage-review.cjs',
- 'docs/reviews/v0.3.8-upstream-comparison.md','docs/reviews/v0.3.8-github-source-comparison.md',
+ 'ARCHITECTURE.md','CODE_MAP.md','TESTING.md','AI_ANALYSIS_GUIDE.md',
+ 'scripts/repository-check.cjs','scripts/stage-review.cjs',
  'app/index.html','app/package.json','app/package-lock.json','app/tsconfig.json','app/vite.config.ts',
  'app/native/reader.c','app/tests/fixtures/message-display.json',
  // Public versioned shortcode vocabulary only; other Electron JSON remains denied.
  'app/electron/text-emoji-names.json'
 ]);
 const sourcePaths=[
- /^docs\/reviews\/v[0-9]+\.[0-9]+\.[0-9]+-[a-z0-9-]+-review\.md$/,
  /^docs\/[0-9]{2}-[a-zA-Z0-9.-]+\.md$/,
  /^app\/src\/[\w/-]+\.(?:ts|tsx|css)$/,
  /^app\/electron\/[\w/-]+\.cjs$/,
@@ -20,7 +19,7 @@ const sourcePaths=[
  /^app\/tests\/[\w.-]+\.(?:cjs|c)$/,
  /^app\/resources\/licenses\/[\w.-]+\.txt$/
 ];
-const pathAllowed=file=>(exact.has(file)||sourcePaths.some(rule=>rule.test(file))) &&
+const pathAllowed=file=>!file.startsWith('app/electron/vendor/') && (exact.has(file)||sourcePaths.some(rule=>rule.test(file))) &&
  !file.split('/').some(part=>/^(?:private|secrets?|credentials?|cache|exports?|logs?)$/i.test(part));
 const maxFile=2*1024*1024;
 const decoder=new TextDecoder('utf-8',{fatal:true});
