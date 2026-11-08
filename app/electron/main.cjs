@@ -133,10 +133,10 @@ app.whenReady().then(async()=>{
         const slot=new URL(request.url).pathname.split('/').at(-1);
         const mediaType=require('./message-content.cjs').messageContent(row).type;
         let links=[],metadataBlocked=secret?null:'mediaKeyMissing';
-        if(secret && ['image','video'].includes(mediaType)) {
+        if(['image','video'].includes(mediaType)) {
           let sourceSecret;
           if(authorizedRoots.has(root))try{sourceSecret=sourceCredential(root,sourceKeys,vault)}catch{/* Optional resource lookup must not block already usable media. */}
-          links=await call('mediaLocateDetailed',{root,secret,row,slot,sourceSecret}).then(value=>{if(value.links.length)mediaVerified.add(root);metadataBlocked=value.reason;return value.links}).catch(error=>{metadataBlocked=require('./wechat-media-db.cjs').mediaFailure(error.code);return []});
+          if(secret||sourceSecret)links=await call('mediaLocateDetailed',{root,secret,row,slot,sourceSecret}).then(value=>{if(value.links.some(link=>!link.resource))mediaVerified.add(root);metadataBlocked=value.reason;return value.links}).catch(error=>{metadataBlocked=require('./wechat-media-db.cjs').mediaFailure(error.code);return []});
         }
         const onOutcome=(status,decrypted,stage)=>{
           if(decrypted)decryptedAccounts.add(account);

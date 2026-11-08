@@ -153,53 +153,65 @@ class WeChatMediaDB {
       const month=new Date(date.getFullYear(),date.getMonth()+offset,1);
       return month.getFullYear()+'-'+String(month.getMonth()+1).padStart(2,'0');
     });
-    const tables=await this.query(root,secret,'hardlink/hardlink.db',schema);
-    const supported=[4,3].map(v=>`${type}_hardlink_info_v${v}`).filter(t=>tables.some(r=>r.name===t));
-    const links=[];let valid=false;
-    for(const table of supported){
-      const columns=await this.query(root,secret,'hardlink/hardlink.db',`PRAGMA table_info(${table})`);
-      if(!['md5','file_name','dir1','dir2'].every(n=>columns.some(c=>c.name===n)))continue;
-      valid=true;
-      const select=`SELECT h.md5,h.file_name, d.username AS first, e.username AS second
-        FROM ${table} h LEFT JOIN dir2id d ON d.rowid=h.dir1 LEFT JOIN dir2id e ON e.rowid=h.dir2
-        WHERE h.md5 IN (${hashes.map(quote).join(',')})`;
-      const scoped=await this.query(root,secret,'hardlink/hardlink.db',select+` AND h.dir1 IN (SELECT rowid FROM dir2id WHERE username IN (${directories.map(quote).join(',')})) LIMIT 32`);
-      const found=scoped.length?scoped:await this.query(root,secret,'hardlink/hardlink.db',select+' LIMIT 32');
-      for(const link of found)if(!links.some(r=>r.file_name===link.file_name&&r.first===link.first&&r.second===link.second))links.push(link);
-    }
-    if(!valid)throw Object.assign(Error('媒体索引结构尚不支持。'),{code:'MEDIA_SCHEMA_UNSUPPORTED'});
+    const links=[];
+    let indexFailure;
+    if(secret && hashes.length)try {
+      const tables=await this.query(root,secret,'hardlink/hardlink.db',schema);
+      const supported=[4,3].map(v=>`${type}_hardlink_info_v${v}`).filter(t=>tables.some(r=>r.name===t));
+      let valid=false;
+      for(const table of supported){
+        const columns=await this.query(root,secret,'hardlink/hardlink.db',`PRAGMA table_info(${table})`);
+        if(!['md5','file_name','dir1','dir2'].every(n=>columns.some(c=>c.name===n)))continue;
+        valid=true;
+        const select=`SELECT h.md5,h.file_name, d.username AS first, e.username AS second
+          FROM ${table} h LEFT JOIN dir2id d ON d.rowid=h.dir1 LEFT JOIN dir2id e ON e.rowid=h.dir2
+          WHERE h.md5 IN (${hashes.map(quote).join(',')})`;
+        const scoped=await this.query(root,secret,'hardlink/hardlink.db',select+` AND h.dir1 IN (SELECT rowid FROM dir2id WHERE username IN (${directories.map(quote).join(',')})) LIMIT 32`);
+        const found=scoped.length?scoped:await this.query(root,secret,'hardlink/hardlink.db',select+' LIMIT 32');
+        for(const link of found)if(!links.some(r=>r.file_name===link.file_name&&r.first===link.first&&r.second===link.second))links.push(link);
+      }
+      if(!valid)throw Object.assign(Error('媒体索引结构尚不支持。'),{code:'MEDIA_SCHEMA_UNSUPPORTED'});
+    }catch(error){
+      if(!sourceSecret)throw error;
+      indexFailure=mediaFailure(error.code);
+    }else if(!secret)indexFailure='mediaKeyMissing';
     // Resource identifiers are filename identities, not XML content digests. Never
     // use an arbitrary XML hash as a broad filename prefix.
     let resourceFailure;
-    if(!links.length && sourceSecret && /^-?\d{1,19}$/.test(String(row.source_local_id)) && Number.isSafeInteger(row.ts)) {
+    let resourceLink;
+    if(sourceSecret && /^-?\d{1,19}$/.test(String(row.source_local_id)) && Number.isSafeInteger(row.ts)) {
       try {
         const relative='message/message_resource.db';
-        const resources=await this.query(root,sourceSecret,relative,`SELECT i.message_id,hex(i.packed_info) AS packed_hex
-          FROM MessageResourceInfo i JOIN ChatName2Id n ON n.rowid=i.chat_id
+        // Resolve uniqueness and variants in one statement against one snapshot.
+        // A second matching row with an unknown packed layout still makes the association ambiguous.
+        const details=await this.query(root,sourceSecret,relative,`WITH matches AS (
+          SELECT i.message_id,i.packed_info FROM MessageResourceInfo i
+          JOIN ChatName2Id n ON n.rowid=i.chat_id
           WHERE n.user_name=${quote(row.chat)} AND i.message_local_id=${quote(row.source_local_id)}
           AND i.message_create_time=${row.ts} AND (i.message_local_type & 4294967295)=${type==='image'?3:43}
-          AND length(i.packed_info)=36 LIMIT 2`);
-        if(resources.length===1 && /^\d{1,19}$/.test(String(resources[0].message_id))) {
-          const packed=Buffer.from(resources[0].packed_hex||'','hex');
-          if(packed.length===36 && packed.subarray(0,4).equals(Buffer.from([18,34,10,32]))) {
-            const id=packed.subarray(4).toString('ascii');
-            if(/^[a-f0-9]{32}$/.test(id) && packed.subarray(4).equals(Buffer.from(id,'ascii'))) {
-              const details=await this.query(root,sourceSecret,relative,`SELECT type,size,status FROM MessageResourceDetail WHERE message_id=${quote(resources[0].message_id)} LIMIT 17`);
-              // Only the exact, observed resource variants are understood. Unknown
-              // types, duplicate variants and incomplete records cannot authorize files.
-              const sizes={};
-              if(details.length<=16)for(const [role,code] of Object.entries(type==='image'?{thumbnail:262145,original:131073}:{thumbnail:196610,original:131074})) {
-                const entries=details.filter(d=>Number(d.type)===code);
-                if(entries.length===1 && Number(entries[0].status)===1 && Number.isSafeInteger(Number(entries[0].size)) && Number(entries[0].size)>0)sizes[role]=Number(entries[0].size);
-              }
-              const month=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0');
-              if(Object.keys(sizes).length)links.push({resource:{id,chatHash,month,sizes}});
+          LIMIT 2
+        )
+        SELECT CASE WHEN length(m.packed_info)=36 THEN hex(m.packed_info) END AS packed_hex,d.type,d.size,d.status
+        FROM matches m JOIN MessageResourceDetail d ON d.message_id=m.message_id
+        WHERE (SELECT count(*) FROM matches)=1 LIMIT 17`);
+        const packed=Buffer.from(details[0]?.packed_hex||'','hex');
+        if(packed.length===36 && packed.subarray(0,4).equals(Buffer.from([18,34,10,32]))) {
+          const id=packed.subarray(4).toString('ascii');
+          if(/^[a-f0-9]{32}$/.test(id) && packed.subarray(4).equals(Buffer.from(id,'ascii'))) {
+            const sizes={};
+            if(details.length<=16)for(const [role,code] of Object.entries(type==='image'?{thumbnail:262145,original:131073}:{thumbnail:196610,original:131074})) {
+              const entries=details.filter(d=>Number(d.type)===code);
+              if(entries.length===1 && Number(entries[0].status)===1 && Number.isSafeInteger(Number(entries[0].size)) && Number(entries[0].size)>0)sizes[role]=Number(entries[0].size);
             }
+            const month=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0');
+            if(Object.keys(sizes).length)resourceLink={resource:{id,chatHash,month,sizes}};
           }
         }
       }catch(error){resourceFailure=mediaFailure(error.code);}
     }
-    return {links:links.slice(0,32),reason:links.length?null:resourceFailure||'mediaIndexMissing',stage:'index'};
+    const candidates=links.slice(0,32);
+    if(resourceLink)candidates.push(resourceLink);
+    return {links:candidates,reason:resourceFailure||indexFailure||(candidates.length?null:'mediaIndexMissing'),stage:'index'};
   }
 
   async avatar(root,secret,username) {

@@ -123,7 +123,7 @@ async function resolveAsset(root,row,slot,{links=[],voice,ffmpeg,timingScale=1,d
     for(const [extension,role] of variants) {
       const size=r.sizes?.[role];if(!Number.isSafeInteger(size)||size<=0)continue;
       const relative=type==='image'?path.join('msg','attach',chat,r.month,'Img',r.id+extension):path.join('msg','video',r.month,r.id+extension);
-      candidates.unshift(relative);expectedSizes.set(relative,size);
+      candidates.push(relative);expectedSizes.set(relative,size);
     }
   }
   diagnostics.reason=type==='sticker'&&remoteHint?'stickerRemoteOnly':keys.length||links.length?'resourceMissing':'metadataMissing';
