@@ -18,13 +18,15 @@ export SQLCIPHER_DIR="$sqlcipher_dir"
 ```sh
 cd app
 npm ci
+# 若 npm 阻止 Electron 安装脚本，显式下载锁定版本的 Electron。
+test -f node_modules/electron/path.txt || node node_modules/electron/install.js
 npm test
 npm run build:native
 npm run build
-npm start
+npm start -- "--validation-user-data=$(mktemp -d /tmp/mw-validation.XXXXXXXX)"
 ```
 
-测试只使用临时或内存数据库、合成媒体及本机模拟 HTTP 服务。应用的日常运行会使用本机应用数据目录；开发时若已装有同版本 Next，请先用隔离测试配置，避免接触现有档案。查看 [JSON 导入格式](docs/04-import-format.md) 和 [本地文本表情资源](docs/39-text-emoji-local-pack.md)。
+测试只使用临时或内存数据库、合成媒体及本机模拟 HTTP 服务。上面的启动命令使用临时验证资料，禁止访问真实微信源；普通启动会打开 Next 自己的本机工作目录。查看 [JSON 导入格式](docs/04-import-format.md) 和 [本地文本表情资源](docs/39-text-emoji-local-pack.md)。
 
 ## 本地 AI
 
