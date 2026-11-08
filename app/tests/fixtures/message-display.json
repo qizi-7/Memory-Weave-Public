@@ -1,0 +1,86 @@
+[
+  {
+    "category": "recall",
+    "kind": "system",
+    "type": "system",
+    "preview": "已撤回一条示例消息",
+    "raw": "<sysmsg type=\"revokemsg\"><revokemsg><replacemsg>已撤回一条示例消息</replacemsg></revokemsg></sysmsg>"
+  },
+  {
+    "category": "video",
+    "kind": "video",
+    "type": "video",
+    "preview": "[视频]",
+    "raw": "<msg><videomsg playlength=\"7\" length=\"2048\" /></msg>"
+  },
+  {
+    "category": "image",
+    "kind": "image",
+    "type": "image",
+    "preview": "[图片]",
+    "raw": "<msg><img length=\"2048\" cdnthumburl=\"fixture-only\" /></msg>"
+  },
+  {
+    "category": "quote",
+    "kind": "link",
+    "type": "quote",
+    "preview": "[引用消息] 示例标题",
+    "raw": "<msg><appmsg><type>57</type><title>示例标题</title><refermsg><type>1</type><content>示例引用</content></refermsg></appmsg></msg>"
+  },
+  {
+    "category": "text",
+    "kind": "text",
+    "type": "text",
+    "preview": "完全合成的聊天样本",
+    "raw": "完全合成的聊天样本"
+  },
+  {
+    "category": "sticker",
+    "kind": "system",
+    "type": "sticker",
+    "preview": "[动画表情]",
+    "raw": "<msg><emoji len=\"512\" /></msg>"
+  },
+  {
+    "category": "share",
+    "kind": "link",
+    "type": "share",
+    "preview": "[链接] 示例文章",
+    "raw": "<msg><appmsg><type>5</type><title>示例文章</title><url>https://example.invalid/article</url></appmsg></msg>"
+  },
+  {
+    "category": "file",
+    "kind": "link",
+    "type": "file",
+    "preview": "[文件] 示例.txt",
+    "raw": "<msg><appmsg><type>6</type><title>示例.txt</title><appattach><totallen>16</totallen></appattach></appmsg></msg>"
+  },
+  {
+    "category": "voice",
+    "kind": "voice",
+    "type": "voice",
+    "preview": "[语音]",
+    "raw": "<msg><voicemsg voicelength=\"2000\" /></msg>"
+  },
+  {
+    "category": "miniProgram",
+    "kind": "link",
+    "type": "miniProgram",
+    "preview": "[小程序] 示例服务",
+    "raw": "<msg><appmsg><type>33</type><title>示例服务</title></appmsg></msg>"
+  },
+  {
+    "category": "template",
+    "kind": "system",
+    "type": "system",
+    "preview": "测试甲加入群聊",
+    "raw": "<sysmsg type=\"sysmsgtemplate\"><sysmsgtemplate><content_template><template>$member$加入群聊</template><link_list><link name=\"member\"><memberlist><member><nickname>测试甲</nickname></member></memberlist></link></link_list></content_template></sysmsgtemplate></sysmsg>"
+  },
+  {
+    "category": "transfer",
+    "kind": "link",
+    "type": "transfer",
+    "preview": "[转账] 示例转账",
+    "raw": "<msg><appmsg><type>2000</type><title>示例转账</title></appmsg></msg>"
+  }
+]
